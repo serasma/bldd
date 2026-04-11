@@ -3,8 +3,10 @@ package domain
 import (
 	"context"
 	"debug/elf"
+	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -48,6 +50,14 @@ func (w *Walker) Walk(ctx context.Context) ([]LibraryUsage, error) {
 				}
 
 				if err != nil {
+					if errors.Is(err, errors.New("EvalSymlinks: too many links")) {
+						slog.Info(
+							"walker: symlink circular dependency",
+							slog.String("error", err.Error()),
+							slog.String("path", path),
+						)
+						return nil
+					}
 					return err
 				}
 
