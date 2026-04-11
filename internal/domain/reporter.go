@@ -26,7 +26,7 @@ func (r *Reporter) Render(librariesUsage []LibraryUsage) error {
 	defer f.Close()
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("report on dynamic used libraries by ELF executables on %s\n",
+	sb.WriteString(fmt.Sprintf("report on dynamic used libraries by ELF executables on %s\n\n",
 		strings.Join(r.cfg.Directories, ",")))
 
 	for _, libraryUsage := range librariesUsage {
@@ -34,6 +34,7 @@ func (r *Reporter) Render(librariesUsage []LibraryUsage) error {
 		for _, file := range libraryUsage.Files {
 			sb.WriteString(fmt.Sprintf("- %s\n", file))
 		}
+		sb.WriteString("\n")
 	}
 
 	if _, err := f.WriteString(sb.String()); err != nil {

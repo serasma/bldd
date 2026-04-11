@@ -3,36 +3,50 @@ package domain
 import (
 	"context"
 	"debug/elf"
-	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
-	"github.com/facebookgo/symwalk"
+	"github.com/edwardrf/symwalk"
 	"github.com/serrasma/bldd/internal/config"
 	"golang.org/x/sync/errgroup"
 )
 
 type Walker struct {
+	usageMu        sync.RWMutex
 	librariesUsage map[string][]string
-	librariesList  map[string]struct{}
-	directories    []string
-	cfg            *config.Config
+
+	librariesList     map[string]struct{}
+	isLibrariesFilter bool
+	directories       []string
+	cfg               *config.Config
 }
 
 func NewWalker(cfg *config.Config) *Walker {
-	librariesList := make(map[string]struct{})
-	for _, library := range cfg.Libraries {
-		librariesList[library] = struct{}{}
+	var (
+		librariesList     map[string]struct{}
+		isLibrariesFilter bool
+	)
+
+	if len(cfg.Libraries) != 0 {
+		isLibrariesFilter = true
+		librariesList = make(map[string]struct{})
+		for _, library := range cfg.Libraries {
+			librariesList[library] = struct{}{}
+		}
 	}
 
 	return &Walker{
-		librariesList: librariesList,
-		directories:   resolveDirectories(cfg.Directories),
-		cfg:           cfg,
+		librariesUsage:    make(map[string][]string),
+		librariesList:     librariesList,
+		isLibrariesFilter: isLibrariesFilter,
+		directories:       resolveDirectories(cfg.Directories),
+		cfg:               cfg,
 	}
 }
 
@@ -50,22 +64,23 @@ func (w *Walker) Walk(ctx context.Context) ([]LibraryUsage, error) {
 				}
 
 				if err != nil {
-					if errors.Is(err, errors.New("EvalSymlinks: too many links")) {
-						slog.Info(
-							"walker: symlink circular dependency",
-							slog.String("error", err.Error()),
-							slog.String("path", path),
-						)
-						return nil
-					}
-					return err
+					slog.Info(
+						"walker: walk error",
+						slog.String("error", err.Error()),
+						slog.String("path", path),
+					)
+					return nil
 				}
 
 				if info.IsDir() {
 					return nil
 				}
 
-				if err = w.listDependencies(path); err != nil {
+				if info.Mode()&os.ModeSymlink == 1 {
+					return nil
+				}
+
+				if err = w.processIfELF(path); err != nil {
 					return err
 				}
 
@@ -85,10 +100,10 @@ func (w *Walker) Walk(ctx context.Context) ([]LibraryUsage, error) {
 	return w.usageSort(), nil
 }
 
-func (w *Walker) listDependencies(path string) error {
+func (w *Walker) processIfELF(path string) error {
 	f, err := elf.Open(path)
 	if err != nil {
-		return err
+		return nil
 	}
 	defer f.Close()
 
@@ -98,12 +113,17 @@ func (w *Walker) listDependencies(path string) error {
 	}
 
 	for _, need := range needs {
-		if _, ok := w.librariesList[need.Name]; !ok {
-			continue
+		if w.isLibrariesFilter {
+			if _, ok := w.librariesList[need.Name]; !ok {
+				continue
+			}
 		}
 
 		libraryName := fmt.Sprintf("%s [%s]", need.Name, strings.TrimPrefix(f.Machine.String(), ELFMachine))
+
+		w.usageMu.Lock()
 		w.librariesUsage[libraryName] = append(w.librariesUsage[libraryName], path)
+		w.usageMu.Unlock()
 	}
 
 	return nil
@@ -111,12 +131,14 @@ func (w *Walker) listDependencies(path string) error {
 
 func (w *Walker) usageSort() []LibraryUsage {
 	librariesUsage := make([]LibraryUsage, 0, len(w.librariesUsage))
+	w.usageMu.RLock()
 	for name, files := range w.librariesUsage {
 		librariesUsage = append(librariesUsage, LibraryUsage{
 			Name:  name,
 			Files: files,
 		})
 	}
+	w.usageMu.RUnlock()
 
 	slices.SortFunc(librariesUsage, func(lhs LibraryUsage, rhs LibraryUsage) int {
 		if len(lhs.Files) < len(rhs.Files) {

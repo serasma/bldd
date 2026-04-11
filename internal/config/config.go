@@ -10,9 +10,19 @@ type Config struct {
 }
 
 func New(libraries, directories, reportPath string, workers int) *Config {
+	var splitLibraries []string
+	if libraries != "" {
+		splitLibraries = strings.Split(libraries, ",")
+	}
+
+	var splitDirectories []string
+	if directories != "" {
+		splitDirectories = strings.Split(directories, ",")
+	}
+
 	return &Config{
-		Libraries:   strings.Split(libraries, ","),
-		Directories: strings.Split(directories, ","),
+		Libraries:   splitLibraries,
+		Directories: splitDirectories,
 		ReportPath:  reportPath,
 		Workers:     workers,
 	}
