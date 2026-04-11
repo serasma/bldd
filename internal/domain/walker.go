@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/facebookgo/symwalk"
 	"github.com/serrasma/bldd/internal/config"
 	"golang.org/x/sync/errgroup"
 )
@@ -16,6 +17,7 @@ import (
 type Walker struct {
 	librariesUsage map[string][]string
 	librariesList  map[string]struct{}
+	directories    []string
 	cfg            *config.Config
 }
 
@@ -27,6 +29,7 @@ func NewWalker(cfg *config.Config) *Walker {
 
 	return &Walker{
 		librariesList: librariesList,
+		directories:   resolveDirectories(cfg.Directories),
 		cfg:           cfg,
 	}
 }
@@ -35,9 +38,9 @@ func (w *Walker) Walk(ctx context.Context) ([]LibraryUsage, error) {
 	eg, groupCtx := errgroup.WithContext(ctx)
 	eg.SetLimit(w.cfg.Workers)
 
-	for _, directory := range w.cfg.Directories {
+	for _, directory := range w.directories {
 		eg.Go(func() error {
-			if err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
+			if err := symwalk.Walk(directory, func(path string, info fs.FileInfo, err error) error {
 				select {
 				case <-groupCtx.Done():
 					return context.Cause(groupCtx)
@@ -48,7 +51,7 @@ func (w *Walker) Walk(ctx context.Context) ([]LibraryUsage, error) {
 					return err
 				}
 
-				if d.IsDir() {
+				if info.IsDir() {
 					return nil
 				}
 
@@ -126,6 +129,20 @@ func (w *Walker) usageSort() []LibraryUsage {
 	})
 
 	return librariesUsage
+}
+
+func resolveDirectories(directories []string) []string {
+	resolved := make([]string, 0, len(directories))
+	for _, directory := range directories {
+		target, err := filepath.EvalSymlinks(directory)
+		if err == nil {
+			resolved = append(resolved, target)
+		} else {
+			resolved = append(resolved, directory)
+		}
+	}
+
+	return resolved
 }
 
 const (
