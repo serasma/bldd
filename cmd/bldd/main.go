@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/serrasma/bldd/internal/application/bldd"
-	"github.com/serrasma/bldd/internal/config"
-	"github.com/serrasma/bldd/internal/domain"
+	"github.com/serasma/bldd/internal/application/bldd"
+	"github.com/serasma/bldd/internal/config"
+	"github.com/serasma/bldd/internal/domain"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 	libraries := flag.String("lib", "", "libraries to find")
 	directories := flag.String("dir", "", "directories with binaries")
 	reportPath := flag.String("report", "bldd_report.md", "report file path")
-	workers := flag.Int("worker", 4, "number of workers")
+	workers := flag.Int("worker", 1, "number of workers")
 
 	flag.Parse()
 

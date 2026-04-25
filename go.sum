@@ -1,6 +1,4 @@
 github.com/edwardrf/symwalk v0.1.0 h1:NAakDFfWD1ef65UDiYREFvWiu1+RqRC2dJIDXJdpFjM=
 github.com/edwardrf/symwalk v0.1.0/go.mod h1:qlC1zULcOcrPbB0Mog6yENGnszBOdCM59+rLC6g607Y=
-github.com/facebookgo/symwalk v0.0.0-20150726040526-42004b9f3222 h1:ivxAxcE9py2xLAqpcEwN7sN711aLfEWgh3cY0aha7uY=
-github.com/facebookgo/symwalk v0.0.0-20150726040526-42004b9f3222/go.mod h1:PgrCjL2+FgkITqxQI+erRTONtAv4JkpOzun5ozKW/Jg=
 golang.org/x/sync v0.20.0 h1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=
 golang.org/x/sync v0.20.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=

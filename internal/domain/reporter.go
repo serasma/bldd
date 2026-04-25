@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/serrasma/bldd/internal/config"
+	"github.com/serasma/bldd/internal/config"
 )
 
 type Reporter struct {
