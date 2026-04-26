@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/serrasma/bldd/internal/domain"
+	"github.com/serasma/bldd/internal/domain"
 )
 
 type BLDD struct {

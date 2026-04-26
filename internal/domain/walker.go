@@ -13,7 +13,7 @@ import (
 	"sync"
 
 	"github.com/edwardrf/symwalk"
-	"github.com/serrasma/bldd/internal/config"
+	"github.com/serasma/bldd/internal/config"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -109,7 +109,7 @@ func (w *Walker) processIfELF(path string) error {
 
 	needs, err := f.DynamicVersionNeeds()
 	if err != nil {
-		return err
+		return nil
 	}
 
 	for _, need := range needs {
